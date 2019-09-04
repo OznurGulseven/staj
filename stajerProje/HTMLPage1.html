@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<script>
+    function kontrol() {
+
+        var x = document.getElementById("sayi");
+        if (x.checkValidity() == false) {
+
+            window.alert("İnput Geçersiz")
+        }
+
+        else {
+
+            window.alert("İnput Geçersiz")
+
+        }
+        
+    }
+
+
+</script>
+<body>
+    *//form apsisi
+    <input id="sayi" type="number" min="50" max="100" required/>
+    <button onclick="kontrol()">Kontrol Et</button>
+
+
+</body>
+</html>

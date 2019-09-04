@@ -1,0 +1,362 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Frijole&display=swap" rel="stylesheet">
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+    <script>
+            var clickID = ""; //ID'yi değişkene atamak için kullanılır.
+            var cihazIsim = "";
+            const socket = io.connect("http://10.1.1.165:1453"); //Bağlantı açılıyor.
+            $(document).ready(function () {
+                socket.on('connect', function () {
+                    ///$("#thisSocketId").html("Yönetici ID: "+"<i style='background-color:yellow; color:black;'>"+socket.id+"</i>");
+                });
+                var data2;
+                socket.on("loginClient", function (data) {
+                    data2 = JSON.parse(data);
+                    var html = "";
+                    for (var key in data2) {
+                        if (data2[key].socketID != socket.id) {
+                            html += '<li style="cursor: pointer; font-size:15pt; width: max-content; color:black; background-color:white;  font-family:Time News Roman;" class="client" data-id="' + data2[key].socketID + '">' + data2[key].isim + '</li>';
+                        }
+                    }
+                    $("#allClients").html(html);
+                });
+
+
+                $(document).on("click", ".iptalBtn", function () {
+
+                    socket.emit("iptal", {
+                        socketId: $(this).attr("id")
+                    });
+                    $(this).parent().parent().remove();
+
+                });
+
+                $(document).on("click", ".client", function () {
+                    if( $('#tum_chz').is(':checked')){
+                        window.alert("TÜM CİHAZLAR SEÇİMİNi KALDIRIN!")
+                    }
+                    else {
+                        clickID = $(this).data("id");
+                        cihazIsim = $(this).html();
+                    $("#txtSocketId").val("HEDEF CİHAZ: " + $(this).html());
+                    //$("li").css("background-color","yellow"); Seçilen isimi sarı yap..
+                    }
+
+                });
+                // Zamanlayıcı ayarları.
+                socket.on('zaman', function(data){
+
+                });
+                $('#sinirsiz').change(function() {
+                    if (this.checked) {
+                        $("#saat_sayac").prop("disabled",true);
+                    }
+                    else {
+                        $("#saat_sayac").prop("disabled",false);
+                    }
+                });
+
+                $("#sinirsiz").click(function(){
+                    $("#sayac_saat").prop("disabled",true,);
+
+                })
+                $('#tum_chz').change(function() {
+                    if (this.checked) {
+                        $("#txtSocketId").val("HEDEF CİHAZ: TÜM CİHAZLAR");
+                        $("li").css("background-color","yellow");
+                    }
+                    else {
+                        $("#txtSocketId").val("HEDEF CİHAZ:");
+                        $("li").css("background-color","white");
+                    }
+                });
+
+                function zaman(kontrol){
+                    setInterval(function(){
+                        var tarih=new Date();
+                        var saat=tarih.getHours();
+                        var dakika=tarih.getMinutes();
+                        var zaman=saat+":"+dakika;
+                        if(kontrol>=zaman){
+
+                        }
+                    }, 30000);
+                }
+                //GÖNDERİLECEK MEDYALAR İÇİN SOOCKET EMİRLERİ
+                var sayac=1;
+                var durum;
+                $("#btnSendMessage").click(() => {
+
+                    var deger = $("#radiobtn input[type='radio']:checked").val();
+                    if($("#txtMessage").val()==""){
+                        window.alert("LÜTFEN İÇERİK İÇİN LİNK GİRİNİZ!")
+                    }
+                    if( $('#tum_chz').is(':checked')){
+                        durum=1;
+                    }
+                    else {
+                        durum=0; }
+
+                    socket.emit("tum_cihaz",{
+                        message:durum
+                    });
+
+                    if (deger == "Slayt") {
+                        var zaman=$("#saat_sayac").val();
+                        socket.on('zaman', function(data){
+                            if(data<zaman){
+
+                            }
+                        });
+                        window.alert("SLAYT ÖZELLEŞTİRMESİNİ EKLE BUTONUNDAN YAPINIZ..");
+                    }
+                    else {
+                        if (deger == "Video") {
+                            socket.emit("video", {
+                                socketId: clickID,
+                                message: $("#txtMessage").val(),
+                                zaman: $('#saat_sayac').val()
+                            });
+                        }
+                        else if (deger == "Resim") {
+
+                            socket.emit("resim", {
+                                socketId: clickID,
+                                message: $("#txtMessage").val(),
+                                zaman: $('#saat_sayac').val()
+                            });
+                        }
+                        else if (deger == "Ses") {
+
+                            socket.emit("ses", {
+                                socketId: clickID,
+                                message: $("#txtMessage").val(),
+                                zaman: $('#saat_sayac').val()
+                            });
+                        }
+                    }
+                    if ($("#saat_sayac").checked) {
+                        var kalan= $("#saat_sayac").val;
+                    }
+                    else {
+                        kalan="Süresiz";
+                    }
+                    //Tablo dolduruluyor..
+                    if( durum){
+                        if($('#sinirsiz').is(':checked')){ //tüm cihazlar seçiliyse..
+                            $("#tsatir").after('<tr> <th scope="row">'+sayac+'</th> <td>Tüm Cihazlar</td> <td>'+deger+'</td> <td>Süresiz</td> <td><button type="button" class="btn btn-danger iptalBtn" id="'+clickID+'">X</button></td>  <tr>');
+                        }
+                        else $("#tsatir").after('<tr> <th scope="row">'+sayac+'</th> <td>Tüm Cihazlar</td> <td>'+deger+'</td> <td>'+$("#saat_sayac").val()+'</td> <td><button type="button" class="btn btn-danger iptalBtn" id="'+clickID+'">X</button></td>  <tr>');
+
+                    }
+                    else {
+                        if($('#sinirsiz').is(':checked')){
+                            $("#tsatir").after('<tr> <th scope="row">'+sayac+'</th> <td>'+cihazIsim+ '</td> <td>'+deger+'</td> <td>Süresiz</td> <td><button type="button" class="btn btn-danger iptalBtn" id="'+clickID+'">X</button></td>  <tr>');
+                        }
+                        else $("#tsatir").after('<tr> <th scope="row">'+sayac+'</th> <td>'+cihazIsim+'</td> <td>'+deger+'</td> <td>'+$("#saat_sayac").val()+'</td> <td><button type="button" class="btn btn-danger iptalBtn" id="'+clickID+'">X</button></td>  <tr>');
+                        }
+
+                    sayac++;
+
+                });
+                $("#slayt").click(function () {
+                    $("#slayt_sayi").prop("disabled",false);
+                    $("#slayt_btn").prop("disabled",false);
+                    $("#slayt_hiz").prop("disabled",false);
+                });
+
+                $("#slayt_btn").click(function () {
+
+
+                    var slayt_adet = $("#slayt_sayi").val();
+                    if (slayt_adet < 11 && slayt_adet != 0 && $("#radiobtn input[type='radio']:checked").val() == "Slayt") {
+                        $("#slayt_sayi").prop("disabled",true);
+                        $("#slyt_hiz_div").show();
+                        $("#txtMessage").hide();
+                        $("#btnSendMessage").hide();
+                        for (var i = 0; i < slayt_adet; i++) {
+                            $("#txtSocketId").after('<textarea  id="slayt1"  placeholder="Slayt Resmi İçin Link veya Adres "></textarea> ');
+                            $('#slayt1').attr({ id: 'slayt' + i }); // EKLENEN SLAYT İD'LERİNİ SIRALI YAPMAK İÇİN
+                        }
+                        $("#slayt_btn").after("<button id='slyt_gonder' class='btn buton btn-outline-dark' type='button'> YAYINLA </button>");
+                        $("#slayt_div").css("margin-left", "34px");
+                        $("#slayt_btn").hide();
+
+                        //SLAYT GÖNDER BUTONU ÖZELLEŞTİRMESİ...
+                        $("#slyt_gonder").mouseenter(function () {
+                            $("#slyt_gonder").css("color", "black");
+                            $("#slyt_gonder").css("background-color", "white");
+                        })
+                        $("#slyt_gonder").mouseleave(function () {
+                            $("#slyt_gonder").css("color", "white");
+                            $("#slyt_gonder").css("background-color", "black");
+                        })
+
+                    }
+                    else window.alert("SLAYT İÇİN 10'DAN FAZLA GÖRSEL EKLEYEMEZSİNİZ..!  -SLAYT SEÇİLİ OLMALI!- ");
+
+                    //SLAYT GÖRSELLERİ İÇİN SOCKET EMİRLERİ...
+                    $("#slyt_gonder").click(function () {
+
+                       if($("#slayt_hiz").val()!=0 && $("#slayt1").val()!=0)
+                       {
+                            var slaytlar = [];
+                            for (var i = 0; i < slayt_adet; i++) {
+                                slaytlar.push($("#slayt" + i).val());
+                            }
+
+                            socket.emit("slayt", {
+                                socketId: clickID,
+                                message: JSON.stringify(slaytlar),// DİZİLERİ SUNUCUYA GÖNDEREBİLMEK İÇİN.
+                                zaman: $('#saat_sayac').val()
+                            });
+
+                            var slyt_hiz=$("#slayt_hiz").val()
+                            //window.alert(slyt_hiz);
+
+                            socket.emit("slayt_hiz",{
+                                socketId:clickID,
+                                message:slyt_hiz
+                            });
+                       }
+                       else {
+                           window.alert("Slayt Animasyon hızını giriniz. Link Giriniz.")
+                       }
+
+
+                    });
+
+                })
+
+            });
+    </script>
+</head>
+<body style="background-repeat:repeat; background-position: center;"
+      background="https://i.ibb.co/p3HNj4J/bg-images-4.png">
+</body>
+<!-- NAV BAR ALANI -->
+<nav style=" border-bottom: #26bcd6 10px solid; background-color: black !important;"
+     class="navbar navbar-dark bg-dark">
+    <div class="container" style="line-height: 2;">
+
+        <a href="#" class="navbar-brand"><img src="https://i.ibb.co/2NdvftT/logo.png"></a>
+
+        <a id="yazi_nav" style="font-family: 'Frijole', cursive; position: relative;
+        right: -10px; top: 5px; font-size: 20pt; margin-right: 8rem;" href="" class="navbar-brand">
+            Merkezi Cihaz
+            Yönetim Arayüzü <span style='font-size:40px;'>&#128187;</span>
+        </a>
+    </div>
+</nav>
+<div id="anneDiv" class="row">
+    <div id="anadiv" class="col-md-12" style=" margin-top: 20px; height: auto; width: auto;">
+        <h3 style="width: fit-content; background-color: black; font-family:Times New Roman; color:white; margin-left: 100px;">
+            Bağlı Cihazlar Listesi: <br />
+        </h3> <p style="font-family: 'Times New Roman'; font-size: 16pt; width: fit-content; background-color:white; margin-left:100px;">Tüm Cihazları Seç <input id="tum_chz" type="checkbox"> </p>
+        <div class="row col col-md-3"
+             style="border-style:double; background-color:#26bcd6; margin-right: 15px; margin-left: 100px; height: auto; width: 255px; float: left;">
+            <div class="row col-md-3">
+                <ul id="allClients"></ul>
+            </div>
+        </div>
+
+        <div style=" float: left; position: relative;  margin-top:-88px;" class="col col-md-4">
+            <input type="text" placeholder="HEDEF CİHAZ :" id="txtSocketId" disabled style="width: 500px;"> <br>
+            <textarea name="" id="txtMessage" style="width: 500px; height: 120px;"
+                      placeholder="Medya İçin Link veya Adres "></textarea><br>
+            <div id="radiobtn" style="background-color: white; height: auto; width:500px; border-color: #26bcd6; border-style: outset;">
+                <p style="background-color: white; width: fit-content;"> <strong>Dosya Türünüzü Seçiniz: </strong></p>
+                <input type="radio" id="huey" name="drone" value="Video" checked>
+                <label for="huey">Video</label>
+                <input type="radio" id="louie" name="drone" value="Resim">
+                <label for="louie">Resim </label>
+                <input type="radio" id="louie" name="drone" value="Ses">
+                <label for="louie">Ses </label>
+                <input type="radio" id="dewey" name="drone" value="Yazi">
+                <label for="dewey">Yazı</label>
+                <input type="radio" id="slayt" name="drone" value="Slayt">
+                <label for="slayt">Slayt</label><br>
+
+                <p> Ne Zamana Kadar Görüntülenecek:<br> <input id="sinirsiz" style="  font-family: 'Times New Roman'; font-size: 16pt;" type="checkbox"><strong for="sinirsiz"> Süresiz</strong></p>
+                <p id="slyt_hiz_div" style="display: none;"> <b style="margin-left: 170px;"> Slayt Hızı:(Saniye)   <input disabled="" id="slayt_hiz" style="margin-left: 0px;" type="number" min="1" max="10" maxlength="2"></p>
+                <div style="margin-bottom:-30px;">
+                    <input id="saat_sayac" style="width: auto; float:left;" class="col" value="17:30" type="time" name="time">
+                    <button style="margin-top:-3px; margin-left: 10px; float:left; background-color: black; color: white; font-family: 'Times New Roman', Times, serif "
+                            id="btnSendMessage" type="button" class="btn buton btn-outline-dark">
+                        YAYINLA
+                    </button>
+                </div>
+                <!-- SLAYT SECIMINE GÖRE EKLEMELER:-->
+                <div id="slayt_div">
+                    <label id="slayt_label" for="dewey" style="margin-left: 30px;"><b>Slayt Adedi:</b></label>
+                    <input disabled id="slayt_sayi" style="margin-left: 0px;" type="number" min="2" max="10" maxlength="2">
+                    <button disabled style="background-color: black; color: white; font-family: 'Times New Roman', Times, serif " id="slayt_btn" type="button" class="btn buton btn-outline-dark">EKLE</button>
+                </div>
+            </div>
+        </div>
+        <div id="zamanlayici" style="display:table; word-wrap:break-word; margin-top: -111px; margin-right: 1opx; height: 335px; position: relative; float: right;" class=" col-md-4">
+            <table style="width: 100%; " class="table table-bordered table-dark">
+                <thead style="width: fit-content;">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Cihaz</th>
+                        <th scope="col">Medya</th>
+                        <th scope="col">Bitiş Zamanı</th>
+                        <th scope="col">✓ / X</th>
+                    </tr>
+                </thead>
+                <tbody id="tsatir">
+                    <tr></tr>
+                    <tr></tr>
+                    <tr></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- Footer -->
+<footer class="page-footer font-small blue">
+
+    <!-- Copyright -->
+    <div style="width: -webkit-fill-available;
+            background-color: #26bcd6;
+            position: absolute;
+            bottom: 0px; background-color:#26bcd6 " class="footer-copyright text-center py-3">
+        EİB © 2019 Copyright
+        <a style="color: black;" target="_blank" href="https://www.facebook.com/eaydin355">
+            Bilgi İşlem Stajyer Emrullah AYDIN &nbsp <a style="padding: 7px; background-color: white; color:black; border-radius:20px;" href="https://www.facebook.com/eaydin355" target="_blank" class="fa fa-facebook"></a>
+            <a style="padding: 7px !important; background-color: white; color:black; border-radius:15px;" href="https://www.instagram.com/emrullaydin/?hl=tr" target="_blank" class="btn-facebook"><i class="fa fa-instagram"></i></a>
+            <a style="padding: 7px; background-color: white; color:black; border-radius:15px;" href="https://www.linkedin.com/in/emrullah-a-4381b491/" target="_blank" class="btn-facebook"><i class="fa fa-linkedin"></i></a>
+
+        </a>
+
+    </div>
+    <!-- Copyright -->
+
+</footer>
+<!-- Footer -->
+<script>
+        //GONDER BUTONU OZELLESTIRMESI
+        $(document).ready(function () {
+
+            $(".buton").mouseenter(function () {
+                $(this).css("color", "black");
+                $(this).css("background-color", "white");
+            })
+            $(".buton").mouseleave(function () {
+                $(this).css("color", "white");
+                $(this).css("background-color", "black");
+            })
+        });
+</script>
+</body>
+</html>
